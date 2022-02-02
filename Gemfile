@@ -54,7 +54,6 @@ gem 'grape_logging', '~> 1.8'
 gem 'memoist', '~> 0.16'
 gem 'jwt', '~> 2.2'
 gem 'jwt-multisig', '~> 1.0', '>= 1.0.4'
-gem 'bunny'
 gem 'phonelib',     '~> 0.6.45'
 gem 'twilio-ruby',  '~> 5.25.4'
 gem 'vault',        '~> 0.1'
@@ -109,3 +108,5 @@ group :test do
 end
 
 gem "pg", "~> 1.2"
+
+gem "ruby-kafka", "~> 1.4.0"

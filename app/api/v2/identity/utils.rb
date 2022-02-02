@@ -79,7 +79,14 @@ module API::V2
         options[:data] = { reason: options[:reason] }.to_json
         options[:topic] = 'session'
         activity_record(options.except(:reason, :error_code, :error_text))
-        error!({ errors: ['identity.session.' + options[:error_text]] }, options[:error_code])
+        content = { errors: ['identity.session.' + options[:error_text]] }
+        if options[:error_text] != 'invalid_params'
+          user = User.find_by(id: options[:user])
+
+          content[:otp] = user.otp
+          content[:phone] = !user.phone.nil?
+        end
+        error!(content, options[:error_code])
       end
 
       def activity_record(options = {})
@@ -95,23 +102,6 @@ module API::V2
           data:            options[:data]
         }
         Activity.create(params)
-      end
-
-      def token_uniq?(jti)
-        error!({ errors: ['identity.user.utilized_token'] }, 422) if Rails.cache.read(jti) == 'utilized'
-        Rails.cache.write(jti, 'utilized', expires_in: Barong::App.config.jwt_expire_time.seconds)
-      end
-
-      def publish_confirmation(user, domain)
-        token = codec.encode(sub: 'confirmation', email: user.email, uid: user.uid)
-        EventAPI.notify(
-          'system.user.email.confirmation.token',
-          record: {
-            user: user.as_json_for_event_api,
-            domain: domain,
-            token: token
-          }
-        )
       end
 
       def publish_session_create(user)
@@ -137,16 +127,6 @@ module API::V2
         res = Net::HTTP.start(uri.hostname, uri.port) {|http|
           http.request(req)
         }
-      end
-
-      def publish_confirmation_code(user, type, event_name)
-        res = management_api_request("post", "http://applogic:3000/api/management/users/verify/get", { type: type, email: user.email })
-
-        if res.code.to_i != 200
-          management_api_request("post", "http://applogic:3000/api/management/users/verify", { type: type, email: user.email, event_name: event_name })
-        else
-          management_api_request("put", "http://applogic:3000/api/management/users/verify", { type: type, email: user.email, reissue: true, event_name: event_name })
-        end
       end
     end
   end

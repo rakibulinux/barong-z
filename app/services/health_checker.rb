@@ -2,7 +2,8 @@
 
 module Services
   module HealthChecker
-    LIVENESS_CHECKS = %i[check_db check_redis check_rabbitmq].freeze
+    # TODO: add check for kafka
+    LIVENESS_CHECKS = %i[check_db check_redis].freeze
     READINESS_CHECKS = %i[check_db].freeze
 
     class << self
@@ -33,23 +34,6 @@ module Services
 
       def check_redis
         Rails.cache.redis.ping == 'PONG'
-      end
-
-      def check_rabbitmq
-        Bunny.run(rabbitmq_credentials) { |c| c.connected? }
-      end
-
-      def rabbitmq_credentials
-        if Barong::App.config.event_api_rabbitmq_url.present?
-          Barong::App.config.event_api_rabbitmq_url
-        else
-          {
-            host: Barong::App.config.event_api_rabbitmq_host,
-            port: Barong::App.config.event_api_rabbitmq_port,
-            username: Barong::App.config.event_api_rabbitmq_username,
-            password: Barong::App.config.event_api_rabbitmq_password
-          }
-        end
       end
     end
   end

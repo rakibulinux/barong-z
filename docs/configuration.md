@@ -77,13 +77,10 @@ More details in [twilio configuration](#twilio-configuration)
 | `barong_twilio_service_sid` | - | any string value | twilio service sid, required by configuration of `twilio_verify` policy |
 | `barong_sms_content_template` | Your verification code for Barong: `{{code}}` | any string value containing `{{code}}` | template, used in both configurations as content for SMS |
 
-### RabbitMQ configuration
+### Kafka configuration
 | Env name | Default value | Possible values | Description |
 | ---------- | ------ |-------------------------|---------------------------------- |
-| `barong_event_api_rabbitmq_host` | localhost | any string value | rabbitmq server host |
-| `barong_event_api_rabbitmq_port` | 5672 | any valid port string | rabbitmq server port |
-| `barong_event_api_rabbitmq_username` | guest | any string value | rabbitmq server access username |
-| `barong_event_api_rabbitmq_password` | guest | any string value | rabbitmq server access password |
+| `barong_kafka_url` | localhost:9092 | any string value | kafka bootstrap server address |
 
 ### Redis configuration
 | `barong_redis_cluster` | `false` | `false` `true` | define redis mode usage (https://redis.io/topics/cluster-tutorial) |

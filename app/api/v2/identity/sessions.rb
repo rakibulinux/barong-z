@@ -39,6 +39,12 @@ module API::V2
         params do
           requires :email
           requires :password
+          optional :email_code,
+                   type: String,
+                   desc: 'Code from Email'
+          optional :phone_code,
+                   type: String,
+                   desc: 'Phone from Email'
           optional :captcha_response,
                    types: { value: [String, Hash], message: 'identity.session.invalid_captcha_format' },
                    desc: 'Response from captcha widget'
@@ -57,27 +63,81 @@ module API::V2
                          action: 'login', result: 'failed', error_text: 'invalid_params')
           end
 
-          unless user.otp
+          if declared_params[:email_code].blank?
+            login_error!(reason: 'Email code is missing', error_code: 401, user: user.id,
+              action: 'login', result: 'failed', error_text: 'missing_email_code')
+          end
+
+          email_code = Code.pending.find_by(user: user, code_type: 'email', category: 'login')
+
+          unless email_code
+            login_error!(reason: 'Email code invalid', error_code: 422, user: user.id,
+                         action: 'login', result: 'failed', error_text: 'email_code_invalid')
+          end
+
+          unless email_code.verify_code!(declared_params[:email_code])
+            email_code.save!
+            login_error!(reason: 'Email code invalid', error_code: 422, user: user.id,
+                         action: 'login', result: 'failed', error_text: 'email_code_invalid')
+          end
+
+          if user.phone
+            if declared_params[:phone_code].blank?
+              login_error!(reason: 'Phone code is missing', error_code: 401, user: user.id,
+                action: 'login', result: 'failed', error_text: 'missing_phone_code')
+            end
+
+            phone_code = Code.pending.find_by(user: user, code_type: 'phone', category: 'login')
+
+            unless phone_code
+              login_error!(reason: 'Phone code invalid', error_code: 400, user: user.id,
+                         action: 'login', result: 'failed', error_text: 'phone_code_invalid')
+            end
+
+            unless phone_code.verify_code!(declared(params)[:phone_code])
+              login_error!(reason: 'Phone code invalid', error_code: 422, user: user.id,
+                         action: 'login', result: 'failed', error_text: 'phone_code_invalid')
+            end
+          end
+
+          if user.otp
+            error!({ errors: ['identity.session.missing_otp'] }, 401) if declared_params[:otp_code].blank?
+            unless TOTPService.validate?(user.uid, declared_params[:otp_code])
+              login_error!(reason: 'OTP code is invalid', error_code: 403,
+                           user: user.id, action: 'login::2fa', result: 'failed', error_text: 'invalid_otp')
+            end
+
+            activity_record(user: user.id, action: 'login::2fa', result: 'succeed', topic: 'session')
+          else
             activity_record(user: user.id, action: 'login', result: 'succeed', topic: 'session')
-            csrf_token = open_session(user)
-            publish_session_create(user)
-
-            present user, with: API::V2::Entities::UserWithFullInfo, csrf_token: csrf_token
-            return status 200
           end
 
-          error!({ errors: ['identity.session.missing_otp'] }, 401) if declared_params[:otp_code].blank?
-          unless TOTPService.validate?(user.uid, declared_params[:otp_code])
-            login_error!(reason: 'OTP code is invalid', error_code: 403,
-                         user: user.id, action: 'login::2fa', result: 'failed', error_text: 'invalid_otp')
-          end
-
-          activity_record(user: user.id, action: 'login::2fa', result: 'succeed', topic: 'session')
           csrf_token = open_session(user)
           publish_session_create(user)
 
           present user, with: API::V2::Entities::UserWithFullInfo, csrf_token: csrf_token
           status(200)
+        end
+
+        desc 'Request code for login'
+        params do
+          requires :email
+          requires :type,
+                   type: String,
+                   allow_blank: false,
+                   values: { value: -> { Code::TYPES }, message: 'identity.session.invalid_type'},
+                   desc: "Type of code"
+        end
+        post '/generate_code' do
+          declared_params = declared(params, include_missing: false)
+          user = get_user(declared_params[:email])
+
+          return status 201 if declared_params[:type] == 'phone' && user.phone.nil?
+
+          code = Code.pending.find_or_create_by(user: user, code_type: declared_params[:type], category: 'login')
+          code.generate_code!
+
+          status 201
         end
 
         desc 'Destroy current session',

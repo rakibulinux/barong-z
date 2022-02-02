@@ -10,17 +10,17 @@ class Phone < ApplicationRecord
   DEFAULT_COUNTRY_CODE_COUNT = 2
 
   belongs_to :user
+  belongs_to :code
 
   attr_encrypted :number
   validates :number, phone: true
 
-  before_create :generate_code
   before_validation :parse_country
   before_validation :sanitize_number
 
   before_save :save_number_index
 
-  scope :verified, -> { where.not(validated_at: nil) }
+  scope :verified, -> { joins(:codes).where.not(validated_at: nil) }
 
   #FIXME: Clean code below
   class << self
@@ -50,32 +50,7 @@ class Phone < ApplicationRecord
     end
   end
 
-  def sub_masked_number
-    code_count = parse_code&.length
-    code_count = DEFAULT_COUNTRY_CODE_COUNT unless code_count
-
-    if number.present?
-      number.sub(/(?<=\A.{#{code_count}})(.*)(?=.{4}\z)/) { |match| '*' * match.length }
-    else
-      number
-    end
-  end
-
-  def generate_code
-    self.code = rand.to_s[2..6]
-  end
-
   private
-
-  def parse_country
-    data = Phonelib.parse(number)
-    self.country = data.country
-  end
-
-  def parse_code
-    data = Phonelib.parse(number)
-    data.country_code
-  end
 
   def sanitize_number
     self.number = Phone.sanitize(number)
@@ -94,16 +69,17 @@ end
 #
 #  id               :bigint           not null, primary key
 #  user_id          :integer          unsigned, not null
-#  country          :string(255)      not null
+#  code_id          :integer          unsigned, not null
 #  code             :string(5)
 #  number_encrypted :string(255)      not null
 #  number_index     :bigint           not null
-#  validated_at     :datetime
 #  created_at       :datetime         not null
 #  updated_at       :datetime         not null
 #
 # Indexes
 #
-#  index_phones_on_number_index  (number_index)
-#  index_phones_on_user_id       (user_id)
+#  index_phones_on_number_index               (number_index)
+#  index_phones_on_user_id                    (user_id)
+#  index_phones_on_code_id                    (user_id)
+#  index_phones_on_user_id_and_code_id        (user_id, code_id)
 #

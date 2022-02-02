@@ -111,6 +111,8 @@ GEM
     declarative (0.0.20)
     declarative-option (0.1.0)
     diff-lcs (1.4.4)
+    digest-crc (0.6.4)
+      rake (>= 12.0.0, < 14.0.0)
     domain_name (0.5.20190701)
       unf (>= 0.0.5, < 1.0.0)
     dry-configurable (0.11.6)
@@ -387,6 +389,8 @@ GEM
       rspec-mocks (~> 3.9.0)
       rspec-support (~> 3.9.0)
     rspec-support (3.9.3)
+    ruby-kafka (1.4.0)
+      digest-crc
     ruby-vips (2.0.17)
       ffi (~> 1.9)
     ruby2_keywords (0.0.2)
@@ -453,7 +457,6 @@ DEPENDENCIES
   bootsnap (>= 1.1.0)
   browser
   bump
-  bunny
   cancancan (~> 2.3.0)
   capybara (>= 3.29.0)
   carrierwave (~> 2.1, >= 2.1.0)
@@ -496,6 +499,7 @@ DEPENDENCIES
   recaptcha (>= 5.2.1)
   redis (~> 4.0)
   rspec-rails (~> 3.9, >= 3.9.1)
+  ruby-kafka (~> 1.4.0)
   sentry-raven (~> 2.9.0)
   shoulda-matchers (~> 4.0.1.0)
   sidekiq (>= 6.0.7)

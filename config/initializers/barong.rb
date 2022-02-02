@@ -82,10 +82,7 @@ Barong::App.define do |config|
 
   # Dependencies configuration (vault, redis, rabbitmq) ---------------
   # https://www.openware.com/sdk/docs/barong/configuration.html#dependencies-configuration-vault-redis-rabbitmq
-  config.set(:event_api_rabbitmq_host, 'localhost')
-  config.set(:event_api_rabbitmq_port, '5672')
-  config.set(:event_api_rabbitmq_username, 'guest')
-  config.set(:event_api_rabbitmq_password, 'guest')
+  config.set(:kafka_url, 'localhost:9092')
   config.set(:vault_address, 'http://localhost:8200')
   config.set(:vault_token, '')
   config.set(:redis_cluster, 'false', type: :bool)

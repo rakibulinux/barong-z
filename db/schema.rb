@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2021_04_07_094208) do
+ActiveRecord::Schema.define(version: 2021_12_31_111151) do
 
   create_table "activities", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
     t.bigint "user_id", null: false
@@ -111,15 +111,34 @@ ActiveRecord::Schema.define(version: 2021_04_07_094208) do
 
   create_table "phones", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
     t.integer "user_id", null: false, unsigned: true
-    t.string "country", null: false
-    t.string "code", limit: 5
+    t.integer "code_id", null: false, unsigned: true
     t.string "number_encrypted", null: false
     t.bigint "number_index", null: false
-    t.datetime "validated_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["number_index"], name: "index_phones_on_number_index"
     t.index ["user_id"], name: "index_phones_on_user_id"
+    t.index ["code_id"], name: "index_phones_on_code_id"
+    t.index ["user_id", "code_id"], name: "index_phones_on_user_id_and_code_id"
+  end
+
+  create_table "codes", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
+    t.integer "user_id", unsigned: true
+    t.string "code", limit: 6, null: false
+    t.string "type", limit: 10, null: false
+    t.string "category", limit: 20, null: false
+    t.string "email_encrypted"
+    t.bigint "email_index"
+    t.string "phone_number_encrypted"
+    t.bigint "phone_number_index"
+    t.integer "attempt_count", default: 0, null: false
+    t.datetime "validated_at"
+    t.datetime "expired_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id"], name: "index_phones_on_user_id"
+    t.index ["email_index"], name: "index_phones_on_email_index"
+    t.index ["phone_number_index"], name: "index_phones_on_phone_number_index"
   end
 
   create_table "profiles", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|

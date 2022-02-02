@@ -3,11 +3,11 @@
 # twilio sms sender
 class TwilioSmsSendService
   class << self
-    def send_confirmation(phone, _channel)
-      Rails.logger.info("Sending SMS to #{phone.number}")
+    def send_confirmation(phone_number, code, _channel)
+      Rails.logger.info("Sending SMS to #{phone_number}")
 
-      send_sms(number: phone.number,
-               content: Barong::App.config.sms_content_template.gsub(/{{code}}/, phone.code))
+      send_sms(number: phone_number,
+               content: Barong::App.config.sms_content_template.gsub(/{{code}}/, code))
     end
 
     def send_sms(number:, content:)
@@ -18,13 +18,6 @@ class TwilioSmsSendService
         to:   '+' + number,
         body: content
       )
-    end
-
-    # returns true if given code matches number in DB
-    def verify_code?(number:, code:, user:)
-      return false if user.phone.nil?
-      
-      user.phone.number == number and user.phone.code == code
     end
   end
 end

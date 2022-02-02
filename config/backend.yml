@@ -55,14 +55,6 @@ services:
       MINIO_SECRET_KEY: changemeEXAMPLEKEY
     command: server /data
 
-  rabbitmq:
-    image: rabbitmq:3.7.6-management
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-
   mailcatcher:
     image: schickling/mailcatcher
     ports:
@@ -72,5 +64,4 @@ services:
 volumes:
   db_data:
   redis_data:
-  rabbitmq_data:
   minio-data:

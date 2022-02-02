@@ -561,9 +561,9 @@ end
 
 IMPORTANT: Don't forget to implement the logic for JWT exception handling!
 
-## Producing events using `rabbitmqadmin`
+## Producing events using `kafka`
 
-`rabbitmqadmin publish routing_key=user.created payload=JWT exchange=barong.events.model`
+`kafka publish routing_key=user.created payload=JWT exchange=barong.events.model`
 
 Don't forget to pass environment variable `JWT`.
 
