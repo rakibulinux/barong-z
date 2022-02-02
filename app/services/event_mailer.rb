@@ -25,9 +25,15 @@ class EventMailer
       @consumer.subscribe(event[:name]) # barong.events.model
     end
 
-    @consumer.each_message do |message|
+    loop do
+      message = @consumer.poll(100)
+
+      next if message.nil?
+
       key = message.key # user.email.confirmation.token
-      handle_message(key, message.value)
+      handle_message(key, message.payload)
+
+      @consumer.commit(nil, true)
     end
   end
 

@@ -109,4 +109,4 @@ end
 
 gem "pg", "~> 1.2"
 
-gem "ruby-kafka", "~> 1.4.0"
+gem "rdkafka", "~> 0.1.8"
