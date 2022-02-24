@@ -11,7 +11,8 @@ class EventMailer
     @exchanges = exchanges
     @keychain = keychain
     @events = events
-    @consumer = ::Stream.consumer
+
+    Kernel.at_exit { unlisten }
   end
 
   def call
@@ -21,19 +22,30 @@ class EventMailer
   private
 
   def listen
-    @events.each do |event|
-      @consumer.subscribe(event[:name]) # barong.events.model
+    begin
+      @consumer = ::Stream.consumer
+      @exchanges.each do |_, exchange|
+        ::Stream.create_topic(exchange[:name])
+        @consumer.subscribe(exchange[:name])
+      end
+
+      @consumer.each_message(automatically_mark_as_processed: false) do |message|
+        handle_message(message.key, message.value)
+
+        @consumer.mark_message_as_processed(message)
+      end
+    rescue => e
+      Rails.logger.info { e }
     end
+  end
 
-    loop do
-      message = @consumer.poll(100)
+  def unlisten
+    if @consumer
+      Rails.logger.info { 'No longer listening for events.' }
 
-      next if message.nil?
-
-      key = message.key # user.email.confirmation.token
-      handle_message(key, message.payload)
-
-      @consumer.commit(nil, true)
+      @consumer.stop
+    else
+      @consumer = nil
     end
   end
 

@@ -39,6 +39,12 @@ module API::V2::Management
               desc: 'Code attempt count'
              }
 
+      expose :data,
+             documentation: {
+              type: 'String',
+              desc: 'Code data'
+             }
+
       with_options(format_with: :iso_timestamp) do
         expose :validated_at
         expose :expired_at

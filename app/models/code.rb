@@ -155,12 +155,19 @@ class Code < ApplicationRecord
     if code_type == 'phone'
       Barong::App.config.twilio_provider.send_confirmation(phone_number, code, 'sms')
     else
+      data_json = nil
+
+      unless data.nil?
+        data_json = JSON.parse(data)
+      end
+
       EventAPI.notify(
         "system.#{category}.confirmation.code", # system.phone_verification.confirmation.code
         record: {
           user: user.as_json_for_event_api,
           domain: Barong::App.config.domain,
-          code: code
+          code: code,
+          data: data_json
         }
       )
     end
@@ -183,6 +190,7 @@ end
 #  attempt_count          :integer          default(0), not null
 #  validated_at           :datetime
 #  expired_at             :datetime         not null
+#  data                   :text(65535)
 #  created_at             :datetime         not null
 #  updated_at             :datetime         not null
 #

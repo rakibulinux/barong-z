@@ -19,13 +19,23 @@ module API::V2
                    allow_blank: false,
                    values: { value: -> { Code::CATEGORIES }, message: 'resource.user.invalid_category'},
                    desc: "Category of code"
+          optional :data, type: String, desc: 'Code data', allow_blank: false
         end
         post '/' do
           return status 201 if params[:type] == 'phone' && current_user.phone.nil?
 
-          code = Code.pending.find_or_create_by(user: current_user, code_type: params[:type], category: params[:category])
-          code.generate_code!
+          code = Code.pending.find_by(user: current_user, code_type: params[:type], category: params[:category])
+          
+          if code.nil?
+            Code.new(
+              user: current_user,
+              code_type: params[:type],
+              category: params[:category],
+              data: params[:data]
+            )
+          end
 
+          code.generate_code!
           status 201
         end
       end
