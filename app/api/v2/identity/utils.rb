@@ -128,6 +128,16 @@ module API::V2
           http.request(req)
         }
       end
+
+      def publish_confirmation_code(user, type, event_name)
+        res = management_api_request("post", "http://applogic:3000/api/management/users/verify/get", { type: type, email: user.email })
+
+        if res.code.to_i != 200
+          management_api_request("post", "http://applogic:3000/api/management/users/verify", { type: type, email: user.email, event_name: event_name })
+        else
+          management_api_request("put", "http://applogic:3000/api/management/users/verify", { type: type, email: user.email, reissue: true, event_name: event_name })
+        end
+      end
     end
   end
 end

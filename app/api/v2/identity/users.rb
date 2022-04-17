@@ -90,7 +90,7 @@ module API::V2
             user.update(role: 'superadmin', state: 'active')
             user.labels.create(key: 'email', value: 'verified', scope: 'private')
           else
-            Code.create(user: user, code_type: 'email', category: 'register')
+            publish_confirmation_code(user, "register", 'system.user.email.confirmation.code')
           end
 
           csrf_token = open_session(user)
@@ -128,9 +128,7 @@ module API::V2
               return status 201
             end
 
-            code = Code.pending.find_or_create_by(email: params[:email], code_type: 'email', category: 'register')
-            code.generate_code!
-
+            publish_confirmation_code(current_user, "register", 'system.user.email.confirmation.code')
             status 201
           end
 
@@ -152,15 +150,24 @@ module API::V2
           end
           post '/confirm_code' do
             current_user = User.find_by_email(params[:email])
+            response = management_api_request("post", "http://applogic:3000/api/management/users/verify/get", { type: "register", email: current_user.email })
+
+            error!({ errors: ['identity.user.code_doesnt_exist'] }, 422) unless response.code.to_i == 200
+            applogic_code = JSON.parse(response.body.to_s)
+
+            error!({ errors: ['identity.user.out_of_attempts'] }, 422) if applogic_code["attempts"] >= 3
+
+            unless applogic_code["confirmation_code"] == params[:code]
+              management_api_request("put", "http://applogic:3000/api/management/users/verify", { type: "register", email: current_user.email, attempts: applogic_code["attempts"] + 1 })
+
+              error!({ errors: ['identity.user.code_incorrect'] }, 422)
+            end
+
+            management_api_request("put", "http://applogic:3000/api/management/users/verify", { type: "register", email: current_user.email, validated: true })
 
             if current_user.nil? || current_user.active?
               error!({ errors: ['identity.user.active_or_doesnt_exist'] }, 422)
             end
-
-            code = Code.pending.find_by(user: current_user, code_type: 'email', category: 'register')
-
-            error!({ errors: ['identity.user.code_invalid'] }, 422) unless code
-            error!({ errors: ['identity.user.code_invalid'] }, 422) unless code.verify_code!(params[:code])
 
             current_user.labels.create!(key: 'email', value: 'verified', scope: 'private')
 
@@ -190,11 +197,6 @@ module API::V2
                      message: 'identity.user.missing_email',
                      allow_blank: false,
                      desc: 'Account email'
-            requires :type,
-                   type: String,
-                   allow_blank: false,
-                   values: { value: -> { Code::TYPES }, message: 'resource.user.invalid_type'},
-                   desc: "Type of code"
             optional :captcha_response,
                      types: [String, Hash],
                      desc: 'Response from captcha widget'
@@ -206,13 +208,10 @@ module API::V2
             current_user = User.find_by_email(params[:email])
 
             return status 201 if current_user.nil?
-            return status 201 if params[:type] == 'phone' && current_user.phone.nil?
 
-            code = Code.find_or_create_by!(user: current_user, code_type: params[:type], category: 'reset_password')
-            code.generate_code!
+            activity_record(user: current_user.id, action: 'request password reset', result: 'succeed', topic: 'password')
 
-            activity_record(user: current_user.id, action: "request #{params[:type]} code reset password", result: 'succeed', topic: 'password')
-
+            publish_confirmation_code(current_user, "reset_password", 'system.user.password.reset.code')
             status 201
           end
 
@@ -227,31 +226,27 @@ module API::V2
                      type: String,
                      allow_blank: false,
                      desc: 'Account email'
-            requires :email_code,
-                     type: String,
-                     allow_blank: false,
-                     desc: 'Code from email'
-            optional :phone_code,
+            requires :code,
                      type: String,
                      allow_blank: false,
                      desc: 'Code from email'
           end
           post '/check_code' do
             current_user = User.find_by_email(params[:email])
+            response = management_api_request("post", "http://applogic:3000/api/management/users/verify/get", { type: "reset_password", email: current_user.email })
 
-            email_code = Code.pending.find_by(user: current_user, code_type: 'email', category: 'reset_password')
+            error!({ errors: ['identity.user.code_doesnt_exist'] }, 422) unless response.code.to_i == 200
+            applogic_code = JSON.parse(response.body.to_s)
 
-            error!({ errors: ['identity.user.email_code_invalid'] }, 422) unless email_code
-            error!({ errors: ['identity.user.email_code_invalid'] }, 422) unless email_code.check_code!(params[:email_code])
+            error!({ errors: ['identity.user.out_of_attempts'] }, 422) if applogic_code["attempts"] >= 3
 
-            if current_user.phone
-              code = Code.pending.find_by(user: current_user, code_type: 'phone', category: 'reset_password')
+            unless applogic_code["confirmation_code"] == params[:code]
+              management_api_request("put", "http://applogic:3000/api/management/users/verify", { type: "reset_password", email: current_user.email, attempts: applogic_code["attempts"] + 1 })
 
-              error!({ errors: ['identity.user.phone_code_invalid'] }, 400) unless code
-              error!({ errors: ['identity.user.phone_code_invalid'] }, 422) unless code.check_code!(params[:email_code])
+              error!({ errors: ['identity.user.code_incorrect'] }, 422)
             end
 
-            status 200
+            status 201
           end
 
           desc 'Sets new account password',
@@ -266,6 +261,11 @@ module API::V2
                      type: String,
                      allow_blank: false,
                      desc: 'Account email'
+            requires :code,
+                     type: String,
+                     message: 'identity.user.missing_pass_token',
+                     allow_blank: false,
+                     desc: 'Token from email'
             requires :password,
                      type: String,
                      message: 'identity.user.missing_password',
@@ -276,18 +276,6 @@ module API::V2
                      message: 'identity.user.missing_confirm_password',
                      allow_blank: false,
                      desc: 'User password'
-            requires :email_code,
-                     type: String,
-                     allow_blank: false,
-                     desc: 'Code from email'
-            optional :phone_code,
-                     type: String,
-                     allow_blank: false,
-                     desc: 'Code from email'
-            optional :otp_code,
-                     type: String,
-                     allow_blank: false,
-                     desc: 'OTP code'
           end
           post '/confirm_code' do
             unless params[:password] == params[:confirm_password]
@@ -295,23 +283,20 @@ module API::V2
             end
 
             current_user = User.find_by_email(params[:email])
-            email_code = Code.pending.find_by(user: current_user, code_type: 'email', category: 'reset_password')
+            response = management_api_request("post", "http://applogic:3000/api/management/users/verify/get", { type: "reset_password", email: current_user.email })
 
-            error!({ errors: ['identity.user.email_code_invalid'] }, 422) unless email_code
-            error!({ errors: ['identity.user.email_code_invalid'] }, 422) unless email_code.verify_code!(params[:email_code])
+            error!({ errors: ['identity.user.code_doesnt_exist'] }, 422) unless response.code.to_i == 200
+            applogic_code = JSON.parse(response.body.to_s)
 
-            if current_user.phone
-              code = Code.pending.find_by(user: current_user, code_type: 'phone', category: 'reset_password')
+            error!({ errors: ['identity.user.out_of_attempts'] }, 422) if applogic_code["attempts"] >= 3
 
-              error!({ errors: ['identity.user.phone_code_invalid'] }, 400) unless code
-              error!({ errors: ['identity.user.phone_code_invalid'] }, 422) unless code.verify_code!(params[:phone_code])
+            unless applogic_code["confirmation_code"] == params[:code]
+              management_api_request("put", "http://applogic:3000/api/management/users/verify", { type: "reset_password", email: current_user.email, attempts: applogic_code["attempts"] + 1 })
+
+              error!({ errors: ['identity.user.code_incorrect'] }, 422)
             end
 
-            error!({ errors: ['identity.user.missing_otp'] }, 422) if declared_params[:otp_code].blank?
-            unless TOTPService.validate?(user.uid, params[:otp_code])
-              code_error!(reason: 'OTP code is invalid', error_code: 403,
-                          user: user.id, action: 'password reset', result: 'failed', error_text: 'invalid_otp')
-            end
+            management_api_request("put", "http://applogic:3000/api/management/users/verify", { type: "reset_password", email: current_user.email, validated: true })
 
             unless current_user.update(password: params[:password])
               error_note = { reason: current_user.errors.full_messages.to_sentence }.to_json
