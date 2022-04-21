@@ -35,7 +35,7 @@ module Stream
       create_topic(topic)
       payload = JSON.dump payload
 
-      producer.produce(payload, topic: topic, key: key)
+      producer.produce(payload, key: key, topic: topic)
       producer.deliver_messages
     end
 

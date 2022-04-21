@@ -172,7 +172,7 @@ module EventAPI
           "\nPublishing to #{topic} with key: #{event_name} (exchange name).\n"
         end
 
-        Stream.produce(topic: topic, key: event_name, payload: event_payload.to_json)
+        Stream.produce(topic: topic, key: event_name, payload: event_payload)
       end
     end
   end
