@@ -31,11 +31,19 @@ module Stream
       )
     end
 
-    def produce(topic, key, payload={})
+    def produce(payload, topic)
       create_topic(topic)
       payload = JSON.dump payload
 
-      producer.produce(payload, key: key, topic: topic)
+      producer.produce(payload, topic: topic)
+      producer.deliver_messages
+    end
+
+    def produce_with_key(payload, topic, key)
+      create_topic(topic)
+      payload = JSON.dump payload
+
+      producer.produce(payload, topic: topic, key: key)
       producer.deliver_messages
     end
 
