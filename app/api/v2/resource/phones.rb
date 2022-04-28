@@ -73,7 +73,7 @@ module API::V2
 
           code_error!(phone.errors.details, 422) if phone.errors.any?
 
-          Barong::App.config.twilio_provider.send_confirmation(phone.number, phone.code, 'sms')
+          code.send_code
           { message: "Code was sent successfully via #{declared_params[:channel]}" }
         end
 

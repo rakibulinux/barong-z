@@ -153,7 +153,7 @@ class Code < ApplicationRecord
 
   def send_code
     if code_type == 'phone'
-      Barong::App.config.twilio_provider.send_confirmation(phone_number, code, 'sms')
+      Barong::App.config.twilio_provider.send_confirmation(phone_number, code.code, 'sms')
     else
       data_json = nil
 
