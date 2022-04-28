@@ -42,7 +42,6 @@ module API::V2
         params do
           optional :phone_number,
                    type: String,
-                   allow_blank: false,
                    desc: 'Phone number with country code'
         end
         post do
@@ -54,33 +53,33 @@ module API::V2
             code.generate_code!
 
             present 200
+          else 
+            validate_phone!(declared_params[:phone_number])
+
+            phone_number = Phone.international(declared_params[:phone_number])
+
+            code = ::Code.pending.find_or_create_by(user: current_user, code_type: 'phone', category: 'phone_verification')
+
+            unless Phone.find_by(user: current_user).nil?
+              error!({ errors: ['resource.phone.exists'] }, 400) if Phone.find_by_number(phone_number)
+
+              phone.code = code
+              phone = current_user.phone
+              phone.number = phone_number
+              phone.save!
+            else
+              phone = Phone.create(user: current_user, code: code, number: phone_number)
+              phone.code = code
+              phone.save!
+            end
+
+            code.phone_number = phone_number
+            code.generate_code!
+
+            code_error!(phone.errors.details, 422) if phone.errors.any?
+
+            present 200
           end
-
-          validate_phone!(declared_params[:phone_number])
-
-          phone_number = Phone.international(declared_params[:phone_number])
-
-          code = ::Code.pending.find_or_create_by(user: current_user, code_type: 'phone', category: 'phone_verification')
-
-          unless Phone.find_by(user: current_user).nil?
-            error!({ errors: ['resource.phone.exists'] }, 400) if Phone.find_by_number(phone_number)
-
-            phone.code = code
-            phone = current_user.phone
-            phone.number = phone_number
-            phone.save!
-          else
-            phone = Phone.create(user: current_user, code: code, number: phone_number)
-            phone.code = code
-            phone.save!
-          end
-
-          code.phone_number = phone_number
-          code.generate_code!
-
-          code_error!(phone.errors.details, 422) if phone.errors.any?
-
-          200
         end
 
         desc 'Verify a phone',
