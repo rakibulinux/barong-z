@@ -15,7 +15,6 @@ class Phone < ApplicationRecord
   attr_encrypted :number
   validates :number, phone: true
 
-  before_validation :parse_country
   before_validation :sanitize_number
 
   before_save :save_number_index
