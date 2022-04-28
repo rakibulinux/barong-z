@@ -49,8 +49,16 @@ module API::V2
 
           # do resend code
           if declared_params[:phone_number].blank?
+            phone = Phone.find_by(user: current_user)
+            if phone.nil?
+              error!({ errors: ['resource.phone.missing_phone'] }, 422)
+            end
+
             code = ::Code.pending.find_by!(user: current_user, code_type: 'phone', category: 'phone_verification')
             code.generate_code!
+
+            phone.code_id = code.id
+            phone.save!
 
             present 200
           else 
@@ -63,13 +71,12 @@ module API::V2
             unless Phone.find_by(user: current_user).nil?
               error!({ errors: ['resource.phone.exists'] }, 400) if Phone.find_by_number(phone_number)
 
-              phone.code = code
+              phone.code_id = code.id
               phone = current_user.phone
               phone.number = phone_number
               phone.save!
             else
-              phone = Phone.create(user: current_user, code: code, number: phone_number)
-              phone.code = code
+              phone = Phone.create(user: current_user, code_id: code_id, number: phone_number)
               phone.save!
             end
 
