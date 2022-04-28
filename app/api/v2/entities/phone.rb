@@ -5,12 +5,6 @@ module API
     module Entities
       # Phone request response
       class Phone < API::V2::Entities::Base
-        expose :country,
-               documentation: {
-                type: 'String',
-                desc: 'Phone country'
-               }
-
         expose :number,
                documentation: {
                 type: 'String',
@@ -23,7 +17,9 @@ module API
                documentation: {
                 type: 'Datetime',
                 desc: 'Phone validation date'
-               }
+               } do |phone|
+                phone.code.validated_at
+               end
       end
     end
   end
