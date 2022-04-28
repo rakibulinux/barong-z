@@ -30,7 +30,7 @@ class EventMailer
       end
 
       @consumer.each_message(automatically_mark_as_processed: false) do |message|
-        handle_message(message.key, message.value)
+        handle_message(message.topic, message.key, message.value)
 
         @consumer.mark_message_as_processed(message)
       end
@@ -57,13 +57,16 @@ class EventMailer
     OpenSSL::PKey.read(Base64.urlsafe_decode64(@keychain[signer][:value]))
   end
 
-  def handle_message(key, payload)
+  def handle_message(topic, key, payload)
     Rails.logger.info { "Start handling a message" }
     Rails.logger.info { "Payload: #{payload}" }
 
-    exchange    = @exchanges.select { |_, ex| ex[:name] == key }
-    exchange_id = exchange.keys.first.to_s
-    signer      = exchange[exchange_id.to_sym][:signer]
+    exchange_name = @exchanges.select { |_, ex| ex[:name] == topic }.keys.first
+    Rails.logger.info { exchange_name }
+    exchange      = @exchanges.select { |_, ex| ex[:name] == topic }[exchange_name]
+    Rails.logger.info { exchange }
+    exchange_id   = exchange[:name]
+    signer        = exchange[:signer]
 
     result = verify_jwt(payload, signer.to_sym)
 
@@ -71,7 +74,9 @@ class EventMailer
       unless result[:verified].include?(signer.to_sym)
 
     config = @events.select do |event|
-      event[:key] == delivery_info[:routing_key]
+      karr = key.split('.')
+      karr.shift(1)
+      event[:key] == karr.join('.')
     end.first
 
     event = result[:payload].fetch(:event)
