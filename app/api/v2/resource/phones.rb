@@ -60,11 +60,14 @@ module API::V2
           unless Phone.find_by(user: current_user).nil?
             error!({ errors: ['resource.phone.exists'] }, 400) if Phone.find_by_number(phone_number)
 
+            phone.code = code
             phone = current_user.phone
             phone.number = phone_number
             phone.save!
           else
             phone = Phone.create(user: current_user, code: code, number: phone_number)
+            phone.code = code
+            phone.save!
           end
           Rails.logger.info { "3" }
 
