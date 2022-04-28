@@ -50,7 +50,7 @@ module API::V2
 
           # do resend code
           if declared_params[:phone_number].blank?
-            code = ::Code.pending.find_by!(user: current_user, , code_type: 'phone', category: 'phone_verification')
+            code = ::Code.pending.find_by!(user: current_user, code_type: 'phone', category: 'phone_verification')
             code.generate_code!
 
             present 200
