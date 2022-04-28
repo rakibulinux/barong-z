@@ -10,7 +10,7 @@ module API
                 type: 'String',
                 desc: 'Submasked phone number'
                } do |phone|
-                Barong::App.config.api_data_masking_enabled ? phone.sub_masked_number : phone.number
+                phone.number
                end
 
         expose :validated_at,
