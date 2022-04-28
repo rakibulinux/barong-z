@@ -47,11 +47,16 @@ module API::V2
         end
         post do
           declared_params = declared(params)
+          Rails.logger.info { "1c" }
           validate_phone!(declared_params[:phone_number])
 
+          Rails.logger.info { "1a" }
           phone_number = Phone.international(declared_params[:phone_number])
 
-          code = Code.pending.find_or_create_by(user: current_user, phone_number: phone_number, code_type: 'phone', category: 'phone_verification')
+          Rails.logger.info { "1" }
+
+          code = ::Code.pending.find_or_create_by(user: current_user, code_type: 'phone', category: 'phone_verification')
+          Rails.logger.info { "2" }
           unless Phone.find_by(user: current_user).nil?
             error!({ errors: ['resource.phone.exists'] }, 400) if Phone.find_by_number(phone_number)
 
@@ -61,7 +66,9 @@ module API::V2
           else
             phone = Phone.create(user: current_user, code: code, number: phone_number)
           end
+          Rails.logger.info { "3" }
 
+          code.phone_number = phone_number
           code.generate_code!
 
           code_error!(phone.errors.details, 422) if phone.errors.any?

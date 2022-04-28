@@ -9,8 +9,8 @@ class Phone < ApplicationRecord
   TWILIO_CHANNELS = %w[call sms].freeze
   DEFAULT_COUNTRY_CODE_COUNT = 2
 
-  belongs_to :user
   belongs_to :code
+  belongs_to :user
 
   attr_encrypted :number
   validates :number, phone: true
@@ -20,7 +20,7 @@ class Phone < ApplicationRecord
 
   before_save :save_number_index
 
-  scope :verified, -> { joins(:codes).where.not(validated_at: nil) }
+  scope :verified, -> { joins(:code).where("codes.validated_at IS NOT NULL") }
 
   #FIXME: Clean code below
   class << self
