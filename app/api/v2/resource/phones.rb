@@ -31,7 +31,7 @@ module API::V2
           present current_user.phone, with: Entities::Phone
         end
 
-        desc 'Add new phone',
+        desc 'Add/update phone',
           failure: [
             { code: 400, message: 'Required params are empty' },
             { code: 401, message: 'Invalid bearer token' },
@@ -40,23 +40,28 @@ module API::V2
           ],
           success: { code: 200, message: 'New phone was added' }
         params do
-          requires :phone_number,
+          optional :phone_number,
                    type: String,
                    allow_blank: false,
                    desc: 'Phone number with country code'
         end
         post do
           declared_params = declared(params)
-          Rails.logger.info { "1c" }
+
+          # do resend code
+          if declared_params[:phone_number].blank?
+            code = ::Code.pending.find_by!(user: current_user, , code_type: 'phone', category: 'phone_verification')
+            code.generate_code!
+
+            present 200
+          end
+
           validate_phone!(declared_params[:phone_number])
 
-          Rails.logger.info { "1a" }
           phone_number = Phone.international(declared_params[:phone_number])
 
-          Rails.logger.info { "1" }
-
           code = ::Code.pending.find_or_create_by(user: current_user, code_type: 'phone', category: 'phone_verification')
-          Rails.logger.info { "2" }
+
           unless Phone.find_by(user: current_user).nil?
             error!({ errors: ['resource.phone.exists'] }, 400) if Phone.find_by_number(phone_number)
 
@@ -69,14 +74,13 @@ module API::V2
             phone.code = code
             phone.save!
           end
-          Rails.logger.info { "3" }
 
           code.phone_number = phone_number
           code.generate_code!
 
           code_error!(phone.errors.details, 422) if phone.errors.any?
 
-          { message: "Code was sent successfully via #{declared_params[:channel]}" }
+          200
         end
 
         desc 'Verify a phone',
