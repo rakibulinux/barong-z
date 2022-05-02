@@ -76,7 +76,7 @@ module API::V2
               phone.number = phone_number
               phone.save!
             else
-              phone = Phone.create(user: current_user, code_id: code.id, number: phone_number)
+              phone = Phone.create(user: current_user, code: code, number: phone_number)
               phone.save!
             end
 
