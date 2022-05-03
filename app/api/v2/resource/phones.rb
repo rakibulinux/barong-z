@@ -68,7 +68,7 @@ module API::V2
 
             code = ::Code.pending.find_or_create_by(user: current_user, code_type: 'phone', category: 'phone_verification')
             code.phone_number = phone_number
-            code.save!
+            code.generate_code!
 
             unless Phone.find_by(user: current_user).nil?
               error!({ errors: ['resource.phone.exists'] }, 400) if Phone.find_by_number(phone_number)
@@ -84,8 +84,6 @@ module API::V2
               phone = Phone.create(user: current_user, code: code, number: phone_number)
               phone.save!
             end
-
-            code.generate_code!
 
             code_error!(phone.errors.details, 422) if phone.errors.any?
 
