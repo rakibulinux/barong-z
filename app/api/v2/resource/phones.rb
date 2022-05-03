@@ -67,6 +67,7 @@ module API::V2
             phone_number = Phone.international(declared_params[:phone_number])
 
             code = ::Code.pending.find_or_create_by(user: current_user, code_type: 'phone', category: 'phone_verification')
+            code.phone_number = phone_number
             code.save!
 
             unless Phone.find_by(user: current_user).nil?
@@ -84,7 +85,6 @@ module API::V2
               phone.save!
             end
 
-            code.phone_number = phone_number
             code.generate_code!
 
             code_error!(phone.errors.details, 422) if phone.errors.any?
