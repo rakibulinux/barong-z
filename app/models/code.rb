@@ -10,6 +10,7 @@ class Code < ApplicationRecord
   CATEGORIES = %w[phone_verification reset_password change_password otp withdrawal login register]
 
   belongs_to :user
+  has_one :phone
 
   validates :code_type, inclusion: { in: TYPES }
   validates :category, inclusion: { in: CATEGORIES }
