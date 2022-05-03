@@ -54,7 +54,7 @@ module API::V2
               error!({ errors: ['resource.phone.missing_phone'] }, 422)
             end
 
-            code = ::Code.pending.find_by!(user: current_user, code_type: 'phone', category: 'phone_verification', phone_number: phone_number)
+            code = ::Code.pending.find_or_create_by(user: current_user, code_type: 'phone', category: 'phone_verification')
             code.generate_code!
 
             phone.code_id = code.id
@@ -66,13 +66,13 @@ module API::V2
 
             phone_number = Phone.international(declared_params[:phone_number])
 
-            code = ::Code.pending.find_or_create_by(user: current_user, code_type: 'phone', category: 'phone_verification', phone_number: phone_number)
+            code = ::Code.pending.find_or_create_by(user: current_user, code_type: 'phone', category: 'phone_verification')
 
             unless Phone.find_by(user: current_user).nil?
               error!({ errors: ['resource.phone.exists'] }, 400) if Phone.find_by_number(phone_number)
 
-              phone.code = code
               phone.code_id = code.id
+              phone.code = code
               phone = current_user.phone
               phone.number = phone_number
               phone.save!
