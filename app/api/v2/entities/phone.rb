@@ -18,7 +18,7 @@ module API
                 type: 'Datetime',
                 desc: 'Phone validation date'
                } do |phone|
-                phone.code.validated_at
+                return phone.code.validated_at if phone.code
                end
       end
     end
