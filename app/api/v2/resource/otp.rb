@@ -40,45 +40,11 @@ module API::V2
                    type: String,
                    allow_blank: false,
                    desc: 'Code from Google Authenticator'
-          requires :email_code,
-                   type: String,
-                   allow_blank: false,
-                   desc: 'Code from Email'
-          optional :phone_code,
-                   type: String,
-                   allow_blank: false,
-                   desc: 'Code from phone'
         end
         post '/enable' do
           if current_user.otp
             otp_error!(reason: '2FA has been already enabled for this account', error_code: 400,
                          user: current_user.id, action: 'enable 2FA', error_text: 'already_enabled')
-          end
-
-          email_code = Code.pending.find_by(user: current_user, code_type: 'email', category: 'otp')
-
-          unless email_code
-            otp_error!(reason: 'Email code invalid',
-              error_code: 422, user: current_user.id, action: 'enable 2FA', error_text: 'email_code_invalid')
-          end
-
-          unless email_code.verify_code!(declared(params)[:email_code])
-            otp_error!(reason: 'Email code invalid',
-              error_code: 422, user: current_user.id, action: 'enable 2FA', error_text: 'email_code_invalid')
-          end
-
-          if current_user.phone
-            code = Code.pending.find_by(user: current_user, code_type: 'phone', category: 'otp')
-
-            unless code
-              otp_error!(reason: 'Phone code invalid',
-                error_code: 400, user: current_user.id, action: 'enable 2FA', error_text: 'phone_code_invalid')
-            end
-
-            unless code.verify_code!(declared(params)[:phone_code])
-              otp_error!(reason: 'Phone code invalid',
-                error_code: 422, user: current_user.id, action: 'enable 2FA', error_text: 'phone_code_invalid')
-            end
           end
 
           unless TOTPService.validate?(current_user.uid, declared(params)[:code])
