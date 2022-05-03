@@ -71,6 +71,8 @@ module API::V2
             unless Phone.find_by(user: current_user).nil?
               error!({ errors: ['resource.phone.exists'] }, 400) if Phone.find_by_number(phone_number)
 
+              phone = Phone.find_by(user: current_user)
+
               phone.code_id = code.id
               phone.code = code
               phone = current_user.phone
@@ -78,6 +80,7 @@ module API::V2
               phone.save!
             else
               phone = Phone.create(user: current_user, code: code, number: phone_number)
+              phone.code_id = code.id
               phone.save!
             end
 
